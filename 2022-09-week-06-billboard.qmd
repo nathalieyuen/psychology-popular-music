@@ -1,0 +1,325 @@
+---
+title: "Activity: Billboard Top 100"
+date: "Fall 2022"
+author: "Your Name"
+format:
+  html:
+    self-contained: true
+execute: 
+  message: false
+  warning: false
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(tidytuesdayR)
+library(DT)
+```
+
+## Tidy Tuesday
+
+[Tidy Tuesday](https://github.com/rfordatascience/tidytuesday) [@mock2022] is way to practice your data visualization skills with a new dataset each week.
+
+For this activity, we'll work with data from the [Billboard Top 100](https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-09-14/readme.md).
+
+You may find these resources helpful in working on this activity:
+
+-   [RStudio Cheatsheets](https://www.rstudio.com/resources/cheatsheets/) (Also under Help \> Cheat Sheets)
+
+-   [R for Data Science](https://r4ds.had.co.nz/index.html)
+
+-   [ggplot2: Elegant Graphics for Data Analysis](https://ggplot2-book.org/index.html)
+
+### Load the data
+
+```{r}
+#| label: data
+
+tuesdata <- tt_load('2021-09-14')
+```
+
+### README
+
+A README file is an overview of a project.
+
+Take a look at the README for the weekly data to get insight on the dataset. This information opens in the Viewer pane.
+
+This includes a data dictionary, source, and a link to an article on the data.
+
+```{r}
+#| label: readme
+
+tuesdata
+```
+
+It looks like there are two datasets here, `billboard.csv` and `audio_features.csv`. We can access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r}
+#| label: files
+#| include: false
+
+billboard <- tuesdata$billboard
+audio_features <- tuesdata $audio_features
+```
+
+### Variables
+
+In the Baby Names activity, we used `glimpse()` to view the variables. For this activity, the information has already been provided in the README.
+
+Practice using `glimpse()` to view the variables in `billboard` or `audio_features` in the chunk below.
+
+```{r}
+#| label: variables
+#| eval: false
+
+
+```
+
+## Billboard
+
+Let's start by using the `lubridate` package to change `week_id` from a character variable to a date.
+
+We'll create a new object, `billboard_new` and also create three new variables, `year`, `month`, and `day`.
+
+```{r}
+#| label: billboard_new
+
+billboard_new <- billboard %>% 
+  mutate(
+    week = lubridate::mdy(week_id),
+    year = lubridate::year(week),
+    month = lubridate::month(week),
+    day = lubridate::day(week)
+  )
+```
+
+### 1950s
+
+#### Let's create a new object with only songs from the 1950s.
+
+```{r}
+#| label: billboard_xs
+
+billboard_xs <- billboard_new %>%
+  filter(
+    year >= 1950 &     # All years greater than and equal to 1950
+      year < 1960      # All years less than 1960
+  )
+```
+
+#### What were all the #1 songs for each week?
+
+```{r}
+
+billboard_xs %>%
+  filter(
+    week_position == 1
+  ) %>% 
+  select(
+    week, song, performer
+  ) %>% 
+  arrange(
+    week
+  ) %>% 
+  datatable()
+```
+
+#### What song had the longest run at #1?
+
+```{r}
+
+billboard_xs %>% 
+  filter(
+    week_position == 1
+  ) %>% 
+  count(
+    song, performer
+  ) %>% 
+  arrange(desc(n)) %>% 
+  datatable()
+```
+
+#### Choose one #1 song and create a visualization of the song's trajectory on the Billboard Top 100.
+
+```{r}
+#| label: song-trajectory-1
+
+billboard_xs %>% 
+  filter(
+    song == "Mack The Knife"
+  ) %>% 
+  ggplot(
+    aes(
+      x = week,
+      y = week_position
+    )
+  ) +
+  geom_line()
+```
+
+Let's reverse the y-axis so the plot is easier to read.
+
+```{r}
+#| label: song-trajectory-2
+
+billboard_xs %>% 
+  filter(
+    song == "Mack The Knife"
+  ) %>% 
+  ggplot(
+    aes(
+      x = week,
+      y = week_position
+    )
+  ) +
+  geom_line() +
+  scale_y_reverse()
+```
+
+And, let's change the x-axis.
+
+```{r}
+#| label: song-dates-1
+
+# https://ggplot2-book.org/scale-position.html?q=dates#date-scales
+
+billboard_xs %>% 
+  filter(
+    song == "Mack The Knife"
+  ) %>% 
+  ggplot(
+    aes(
+      x = week,
+      y = week_position
+    )
+  ) +
+  geom_line() +
+  scale_y_reverse() +
+  scale_x_date(
+    date_breaks = "1 month",
+    date_labels = "%b %Y"
+    )
+```
+
+What were the first and last weeks the song was on the Billboard Top 100?
+
+```{r}
+#| label: song-dates-2
+
+billboard_xs %>% 
+  filter(
+    song == "Mack The Knife"
+  ) %>% 
+  summarise(
+    first = min(week),
+    last = max(week)
+  )
+```
+
+## Level Up (Optional)
+
+Let's compare the top two songs, or choose your own songs to compare!
+
+```{r}
+#| label: song-comparison
+
+billboard_xs %>% 
+  filter(
+    song == "Mack The Knife" |
+      song == "It's All In The Game"
+  ) %>% 
+  ggplot(
+    aes(
+      x = week,
+      y = week_position,
+      group = instance
+    )
+  ) +
+  geom_line() +
+  facet_wrap(
+    ~ song, 
+    scales = "free_x"
+  ) +
+  scale_y_reverse() 
+```
+
+## Audio Features
+
+Let's find the song in the `audio_features` dataset.
+
+```{r}
+
+audio_features %>% 
+  filter(
+    song == "Mack The Knife"
+  ) %>% 
+  select(
+    song_id,
+    performer,
+    song
+  )
+```
+
+It looks like there are two versions of "Mack The Knife" in the `audio_features` dataset.
+
+Let's select the one by Bobby Darin and find the `tempo` and `time_signature`.
+
+```{r}
+
+audio_features %>% 
+  filter(
+    song == "Mack The Knife" &
+      performer == "Bobby Darin"
+  ) %>% 
+  select(
+    tempo, time_signature
+  )
+```
+
+Let's see if we can find the Spotify URL.
+
+```{r}
+
+audio_features %>% 
+  filter(
+    song == "Mack The Knife" &
+      performer == "Bobby Darin"
+  ) %>% 
+  select(
+    spotify_track_preview_url
+  )
+```
+
+## Audacity
+
+Use the `tempo` and `time_signature` to create an 8-bar rhythm track in [Audacity](https://www.audacityteam.org/)
+
+To do this, follow the steps below:
+
+1.  In Audacity, open a New File
+
+2.  Select Generate \> Rhythm Track
+
+3.  Change the "Tempo (bpm)" and "Beats per bar" to match the `tempo` and `time_signature` of your song
+
+4.  Change "Number of bars" to 4
+
+5.  Change "MIDI pitch of strong beat" and "MIDI pitch of weak beat" to 80
+
+6.  Click on "Generate"
+
+Now, make a copy of this selection and change the tempo by:
+
+1.  Selecting the audio clip
+
+2.  Select Effect \> Pitch and Tempo \> Change Tempo
+
+3.  Adjust the tempo using the "Percent Change" field
+
+4.  Select Apply
